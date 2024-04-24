@@ -1,5 +1,5 @@
 public class Server {
-  private static final int PORT = 5555;
+   private static final int PORT = 5555;
     private static final int BOARD_SIZE = 10;
     private static final char EMPTY_CELL = '-';
     private static final char SHIP_CELL = 'S';
@@ -20,10 +20,12 @@ public class Server {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("New client connected: " + clientSocket);
                 clients.add(clientSocket);
+
                 if (!gameStarted) {
                     gameStarted = true;
-                    notifyAllClients("Game started!");
+                    notifyAllClients("Welcome to Battleship! You are playing against the AI.");
                 }
+
                 new Thread(() -> handleClient(clientSocket)).start();
             }
         } catch (IOException e) {
@@ -36,6 +38,7 @@ public class Server {
         for (char[] row : board) {
             Arrays.fill(row, EMPTY_CELL);
         }
+        placeShips();
     }
 
     private static synchronized void notifyAllClients(String message) {
@@ -48,16 +51,27 @@ public class Server {
             }
         }
     }
-
+    private static void placeShips() {
+        Random random = new Random();
+        int numShips = 5; // Let's say we have 5 ships
+        for (int i = 0; i < numShips; i++) {
+            int row = random.nextInt(BOARD_SIZE);
+            int col = random.nextInt(BOARD_SIZE);
+            if (board[row][col] != SHIP_CELL) {
+                board[row][col] = SHIP_CELL;
+            } else {
+                i--; // Retry placing the ship
+            }
+        }
+    }
     private static void handleClient(Socket clientSocket) {
         try (
                 BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                 PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)
         ) {
-            out.println("Welcome to Battleship! You are playing against the AI.");
-
             while (!isGameOver()) {
                 synchronized (clients) {
+                    // Player's turn
                     if (clients.indexOf(clientSocket) == currentPlayer) {
                         out.println("Your turn! Enter target coordinates (row col): ");
                         String[] target = in.readLine().split(" ");
@@ -71,10 +85,8 @@ public class Server {
                             out.println("Miss!");
                             board[row][col] = MISS_CELL;
                         }
-
-                        currentPlayer = (currentPlayer + 1) % clients.size();
-                    } else {
-                        // AI player's turn
+                        notifyAllClients(printBoard()); // Notify all clients about the current board state
+                        //currentPlayer = (currentPlayer + 1) % clients.size();
                         int aiRow = generateRandomNumber(BOARD_SIZE);
                         int aiCol = generateRandomNumber(BOARD_SIZE);
 
@@ -85,12 +97,32 @@ public class Server {
                             out.println("AI chose: " + aiRow + " " + aiCol + " Miss!");
                             board[aiRow][aiCol] = MISS_CELL;
                         }
-
+                        notifyAllClients(printBoard()); // Notify all clients about the current board state
                         currentPlayer = (currentPlayer + 1) % clients.size();
+                    }
+                    // AI's turn
+                    else {
+                        int aiRow = generateRandomNumber(BOARD_SIZE);
+                        int aiCol = generateRandomNumber(BOARD_SIZE);
+
+                        if (board[aiRow][aiCol] == SHIP_CELL) {
+                            out.println("AI chose: " + aiRow + " " + aiCol + " Hit!");
+                            board[aiRow][aiCol] = HIT_CELL;
+                        } else {
+                            out.println("AI chose: " + aiRow + " " + aiCol + " Miss!");
+                            board[aiRow][aiCol] = MISS_CELL;
+                        }
+                        notifyAllClients(printBoard()); // Notify all clients about the current board state
+                        currentPlayer = (currentPlayer + 1) % clients.size();
+
                     }
                 }
             }
-            out.println("Game Over!");
+            // Determine the winner
+            if (isGameOver()) {
+                out.println("Game Over! You Win!");
+                notifyAllClients("Game Over! You Lose!");
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -109,5 +141,20 @@ public class Server {
 
     private static int generateRandomNumber(int max) {
         return (int) (Math.random() * max);
+    }
+
+    private static String printBoard() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < BOARD_SIZE; i++) {
+            for (int j = 0; j < BOARD_SIZE; j++) {
+                char cellToShow = board[i][j];
+                if (cellToShow == SHIP_CELL && cellToShow != HIT_CELL) {
+                    cellToShow = EMPTY_CELL; // Hide ships unless they are hit
+                }
+                sb.append(cellToShow).append(" ");
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
     }
 }
