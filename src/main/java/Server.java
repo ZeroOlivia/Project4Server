@@ -243,7 +243,7 @@ public class Server {
     private static int bombRow(int row, char[][] targetBoard) {
         int hitAmount = 0;
         for (int j = 0; j < BOARD_SIZE; j++) {
-            if (targetBoard[row][j] == SHIP_CELL) {
+            if (targetBoard[row][j] == SHIP_CELL || || targetBoard[row][j] == HIT_CELL ) {
                 targetBoard[row][j] = HIT_CELL;
                 hitAmount++;
             }
@@ -257,7 +257,7 @@ public class Server {
     private static int bombCol(int col, char[][] targetBoard) {
         int hitAmount = 0;
         for (int i = 0; i < BOARD_SIZE; i++) {
-            if (targetBoard[i][col] == SHIP_CELL) {
+            if (targetBoard[i][col] == SHIP_CELL || || targetBoard[i][col] == HIT_CELL) {
                 targetBoard[i][col] = HIT_CELL;
                 hitAmount++;
             }
