@@ -165,14 +165,20 @@ public class Server {
                     if (bombChoice.equals("column")) {
                         out.println("Enter the column (1-10) to bomb:");
                         int bombCol = Integer.parseInt(in.readLine()) - 1;
+                        int hits = bombCol(bombCol, aiBoard);
+                        out.println("You hit " + hits + " times!");
                         bombCol(bombCol, aiBoard);
                     } else if (bombChoice.equals("row")) {
                         out.println("Enter the row (A-J) to bomb:");
                         int bombRow = in.readLine().toUpperCase().charAt(0) - 'A';
-                        bombRow(bombRow, aiBoard);
+                        int hitAmount = bombRow(bombRow, aiBoard);
+                        out.println("You hit " + hitAmount + " times!");
                     }
                     // Reset player hits after using the bombing option
                     resetHitsPlayer();
+                    out.println("AI board after STRIKE:");
+                    printBoard(out, aiBoard, true);
+
                 }
 
                 // AI's turn
@@ -184,8 +190,11 @@ public class Server {
                     playerBoard[aiRow][aiCol] = HIT_CELL;
                     incrementAiHits();
                     if(aiHits == 3){
-                        bombRandomRow();
+                        out.println("AI has unlocked ability to strike an entire column!");
+                        bombRandomColumn(playerBoard);
                         resetHitsAI();
+                        out.println("Your board after AI STRIKE:");
+                        printBoard(out, playerBoard, false);
                     }
                 } else {
                     out.println("AI Miss!");
@@ -205,6 +214,8 @@ public class Server {
                 } else {
                     out.println("You Lose!");
                 }
+                resetHitsAI();
+                resetHitsPlayer();
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -229,31 +240,32 @@ public class Server {
     private static int generateRandomNumber(int max) {
         return (int) (Math.random() * max);
     }
-    private static void bombRow(int row, char[][] targetBoard) {
+    private static int bombRow(int row, char[][] targetBoard) {
+        int hitAmount = 0;
         for (int j = 0; j < BOARD_SIZE; j++) {
             if (targetBoard[row][j] == SHIP_CELL) {
                 targetBoard[row][j] = HIT_CELL;
+                hitAmount++;
             }
             else{
                 targetBoard[row][j] = MISS_CELL;
             }
         }
+        return hitAmount;
     }
 
-    private static void bombCol(int col, char[][] targetBoard) {
+    private static int bombCol(int col, char[][] targetBoard) {
+        int hitAmount = 0;
         for (int i = 0; i < BOARD_SIZE; i++) {
             if (targetBoard[i][col] == SHIP_CELL) {
                 targetBoard[i][col] = HIT_CELL;
+                hitAmount++;
             }
             else{
                 targetBoard[i][col] = MISS_CELL;
             }
         }
-    }
-
-    private static void bombRandomRow() {
-        int row = generateRandomNumber(BOARD_SIZE);
-        bombRow(row, aiBoard);
+        return  hitAmount;
     }
 
     private static void bombRandomColumn(char[][] targetBoard) {
@@ -301,17 +313,5 @@ public class Server {
         }
     }
 
-
-    private static int countShipsSunk(char[][] board) {
-        int shipCount = 0;
-        for (char[] row : board) {
-            for (char cell : row) {
-                if (cell == HIT_CELL) {
-                    shipCount++;
-                }
-            }
-        }
-        return shipCount;
-    }
 
 }
